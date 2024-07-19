@@ -134,10 +134,10 @@ def new_correlate(data: list[int], word: list[int]) -> np.ndarray:
     # That requires further calculation not done here.
     return corr_data
 
-
-def threshold2(packets, time_center, threshold_value, ax):
-    before_window = 80
-    after_window = 10
+all_zero_percentages = []
+def zero_percentage(packets, time_center, threshold_value, ax):
+    before_window = 90
+    after_window = 12
 
     num_zeros = sum(
         1
@@ -146,6 +146,8 @@ def threshold2(packets, time_center, threshold_value, ax):
     )
     percent_above = num_zeros / (before_window + after_window) * 100
     result = percent_above > 70
+
+    all_zero_percentages.append(percent_above)
 
     ax.text(
         time_center,
@@ -214,33 +216,54 @@ def new_correlation_2(packets, times, word):
             )
 
             # print(packets[possible_one_time - window : possible_one_time + window])
-            if threshold2(packets, possible_one_time, threshold_value, ax):
+            if zero_percentage(packets, possible_one_time, threshold_value, ax):
+                color = "black" if word[i] == 1 else "blue"
                 result.append(1)
                 ax.text(
                     possible_one_time,
                     threshold_value + 1,
                     "1",
-                    color="black",
+                    color=color,
                     ha="center",
                 )
             else:
+                color = "black" if word[i] == 0 else "blue"
                 result.append(0)
                 ax.text(
                     possible_one_time,
                     threshold_value + 1,
                     "0",
-                    color="black",
+                    color=color,
                     ha="center",
                 )
 
-        print(result)
+        # Create a graph that shows the distribution of zeros and ones
+        # fig, ax = plt.subplots()
+        # ax.hist(all_zero_percentages, bins=20)
+        # ax.set_title("Distribution of Zero Percentages")
+        # ax.set_xlabel("Percentage of Zeros")
+        # ax.set_ylabel("Frequency")
+
+        # plt.show()
+
+        # print(result)
 
         diff_count = sum(r != w for r, w in zip(result, word))
         print(
             f"Number of elements that are different between result and word: {diff_count}"
         )
 
-        fig.set_size_inches(17.5, 9)
+
+        # fig.set_size_inches(17.5, 9)
+        if diff_count > 10:
+            ax.clear()
+            ax.scatter(times, packets, s=2)
+            ax.set_title("Packets Over Time")
+            ax.set_xlabel("Time (ms)")
+            ax.set_ylabel("Packets")
+            ax.axhline(y=threshold_value, color="r", linestyle="--", label="Threshold")
+            continue
+
         plt.show()
         exit()
         return result
