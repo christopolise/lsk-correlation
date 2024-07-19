@@ -6,6 +6,7 @@ import numpy as np
 import csv
 import sys
 from scipy import signal, stats
+import math as m
 
 # This is the class that WLSK uses to store a "bucket"
 class Bucket:
@@ -136,8 +137,8 @@ def new_correlate(data: list[int], word: list[int]) -> np.ndarray:
 
 all_zero_percentages = []
 def zero_percentage(packets, time_center, threshold_value, ax):
-    before_window = 90
-    after_window = 12
+    before_window = 100
+    after_window = 2
 
     num_zeros = sum(
         1
@@ -168,23 +169,14 @@ def zero_percentage(packets, time_center, threshold_value, ax):
     return result
 
 
-def threshold(packets, time_center, threshold_value, ax):
-    before_window = 10
-    after_window = 20
+def sync_threshold(packets, time_center, threshold_value, ax):
+    bit_decision = packets > threshold_value
+    return np.where(bit_decision == 1)[0]
 
-    result = (
-        max(packets[time_center - before_window : time_center + after_window])
-        > threshold_value
-    )
 
-    ax.axvspan(
-        time_center - before_window,
-        time_center + after_window,
-        color="gray",
-        alpha=0.2,
-    )
-
-    return result
+def sync_on_zero(packets, time_center, threshold_value, ax):
+    bit_decision = packets == 0
+    return np.where(bit_decision == 1)[0]
 
 
 def new_correlation_2(packets, times, word):
@@ -197,15 +189,15 @@ def new_correlation_2(packets, times, word):
     threshold_value = 10
     before_window = 10
     after_window = 20
-    bit_decision = packets > threshold_value
 
     ax.axhline(y=threshold_value, color="r", linestyle="--", label="Threshold")
 
-    for one_index in np.where(bit_decision == 1)[0]:
+    for one_index in sync_threshold(packets, times, threshold_value, None):
+        ax.vlines(times[one_index], 0, 100, color="red", linestyle="--")
         print(times[one_index])
         result = []
         for i in range(len(word)):
-            possible_one_time = times[one_index] + 102 * i
+            possible_one_time = times[one_index] + m.ceil(102.4 * i)
 
             ax.text(
                 possible_one_time,
@@ -238,19 +230,19 @@ def new_correlation_2(packets, times, word):
                 )
 
         # Create a graph that shows the distribution of zeros and ones
-        # fig, ax = plt.subplots()
-        # ax.hist(all_zero_percentages, bins=20)
-        # ax.set_title("Distribution of Zero Percentages")
-        # ax.set_xlabel("Percentage of Zeros")
-        # ax.set_ylabel("Frequency")
+        fig, ax = plt.subplots()
+        ax.hist(all_zero_percentages, bins=20)
+        ax.set_title("Distribution of Zero Percentages")
+        ax.set_xlabel("Percentage of Zeros")
+        ax.set_ylabel("Frequency")
 
-        # plt.show()
+        plt.show()
 
         # print(result)
 
-        diff_count = sum(r != w for r, w in zip(result, word))
+        diff_count = sum(r != w for r, w in zip(result[:30], word[:30]))
         print(
-            f"Number of elements that are different between result and word: {diff_count}"
+            f"S + P:\t\tNumber of elements that are different between result and word: {diff_count}"
         )
 
 
@@ -264,6 +256,13 @@ def new_correlation_2(packets, times, word):
             ax.axhline(y=threshold_value, color="r", linestyle="--", label="Threshold")
             continue
 
+        diff_count = sum(r != w for r, w in zip(result, word))
+        print(
+            f"S + P + D:\tNumber of elements that are different between result and word: {diff_count}"
+        )
+
+        # Print BER
+        print(f"BER:\t\t{diff_count / len(word)}")
         plt.show()
         exit()
         return result
@@ -393,7 +392,7 @@ if __name__ == "__main__":
 
     expected_data = sync_word + [
         item
-        for bit in preamble
+        for bit in bitstream
         for item in (barker_code if bit else inverted_barker_code)
     ]
 
