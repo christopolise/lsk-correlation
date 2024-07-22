@@ -53,6 +53,9 @@ def import_csv(csv_path: str) -> tuple[np.array, np.array]:
         for row in reader:
             times.append(int(row[0]))
             packets.append(int(row[1]))
+
+    print(f"Packet Len:\t{len(packets)}")
+    print(f"Time Len:\t{len(times)}")
     return np.array(times), np.array(packets)
 
 
@@ -197,8 +200,8 @@ def new_correlation_2(packets, times, word, sync_func=None, bit_func=None, sf_kw
     ax.set_ylabel("Packets")
 
     threshold_value = 10#10 # 10
-    before_window = 1#90 # 1
-    after_window = 101#12 # 101
+    before_window = 101#90 # 1
+    after_window = 1#12 # 101
 
     ax.axhline(y=threshold_value, color="r", linestyle="--", label="Threshold")
 
@@ -273,7 +276,7 @@ def new_correlation_2(packets, times, word, sync_func=None, bit_func=None, sf_kw
         )
 
         # Print BER
-        print(f"BER:\t\t{diff_count / len(word)}")
+        print(f"BER:\t\t{diff_count / len(word) * 100:.2f}%")
         plt.show()
         exit()
         return result
@@ -285,9 +288,9 @@ if __name__ == "__main__":
 
     times, packets = import_csv(csv_path)
 
-    # Cut down the data
-    times = times[20000:]
-    packets = packets[20000:]
+    # Cut down the data, Phil you sneaky
+    # times = times[85000:]
+    # packets = packets[85000:]
 
     # Zero out the timescale - makes graphs not lag horribly
     times = times - times[0]
