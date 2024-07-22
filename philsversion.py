@@ -70,76 +70,6 @@ def port_to_Buckets(times: list[int], packets: list[int]) -> list[Bucket]:
     return buckets
 
 
-def old_correlate(data: list[int], word: list[int]) -> np.ndarray:
-    """this is the current code ported over from the receiver_v3.py in WLSK"""
-    # create the variance data from the normal data
-    new_data: pd.Series = pd.Series(data)
-    var_data: pd.Series = new_data.rolling(window=75).var().bfill()
-
-    # upscale ones and zeros for the word conversion
-    upscaled_one: list[int] = [1] * 102
-    upscaled_zero: list[int] = [-1] * 102
-
-    # Composite the correlation word into a new, huge upscaled word
-    new_word: list[int] = [
-        item
-        for value in word
-        for item in (upscaled_one if value == 1 else upscaled_zero)
-    ]
-
-    # create the correlation data
-    conv: np.ndarray = np.correlate(var_data, new_word, "valid")
-    corr_data: np.ndarray = conv - conv.mean()
-
-    # return the correlation array
-    # NOTE: this is not the index of the bucket at which the strongest point is.
-    # That requires further calculation not done here.
-    return corr_data
-
-
-def upscale(word):
-    # upscale ones and zeros for the word conversion
-    upscaled_one: list[int] = [-1] * 10 + [1] * 77 + [-1] * 15
-    upscaled_zero: list[int] = [-1] * 102
-
-    # Composite the correlation word into a new, huge upscaled word
-    new_word: list[int] = [
-        item
-        for value in word
-        for item in (upscaled_one if value == 1 else upscaled_zero)
-    ]
-
-    return new_word
-
-
-def new_correlate(data: list[int], word: list[int]) -> np.ndarray:
-    """a template function for you to test your own correlation methods."""
-
-    # create the variance data from the normal data
-    new_data: pd.Series = pd.Series(data)
-    # pd.Series(samples).rolling(window=len(symbol)).apply(calc, raw=True)
-    var_data: pd.Series = new_data.rolling(window=75).var().bfill()
-
-    new_word = upscale(word)
-
-    def calc(data):
-        rank = stats.rankdata(data, "average")
-        rank = rank - (len(rank) / 2)  # Make it zero mean
-        rank = rank / (len(rank) / 2)  # Make values between -1 and 1
-        return (rank * new_word).sum()
-
-    # corr_data = var_data.rolling(window=len(new_word)).apply(calc, raw=True)
-
-    # create the correlation data
-    conv: np.ndarray = np.correlate(var_data, new_word, "valid")
-    corr_data: np.ndarray = conv - conv.mean()
-
-    # return the correlation array
-    # NOTE: this is not the index of the bucket at which the strongest point is.
-    # That requires further calculation not done here.
-    return corr_data
-
-
 all_zero_percentages = []
 
 def zero_percentage(packets, time_center, threshold_value, ax, before_window=90, after_window=12):
@@ -378,8 +308,4 @@ if __name__ == "__main__":
         for item in (barker_code if bit else inverted_barker_code)
     ]
 
-    # TODO: Figure out how to correlate properly!
-    # example of testing correlation on the sync word
-    old_sync: np.ndarray = old_correlate(packets, sync_word)
-    new_sync: np.ndarray = new_correlate(packets, sync_word)
     new_sync2: np.ndarray = new_correlation_2(packets, times, expected_data)
