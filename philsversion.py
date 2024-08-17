@@ -100,7 +100,7 @@ def zero_percentage(packets, time_center, threshold_value, ax, before_window=90,
         alpha=0.2,
     )
 
-    return result
+    return result, percent_above
 
 
 def sync_threshold(packets=None, time_center=None, threshold_value=None, ax=None):
@@ -136,6 +136,10 @@ def new_correlation_2(packets, times, word, sync_func=None, bit_func=None, sf_kw
     ax.axhline(y=threshold_value, color="r", linestyle="--", label="Threshold")
 
     for one_index in sync_threshold(packets, times, threshold_value, None):
+
+        # Create new numpy file
+        ones_percentages = []
+
     # for one_index in sync_on_zero(packets, times, threshold_value, None):
         ax.vlines(times[one_index], 0, 100, color="red", linestyle="--")
         print(times[one_index])
@@ -152,9 +156,11 @@ def new_correlation_2(packets, times, word, sync_func=None, bit_func=None, sf_kw
             )
 
             # print(packets[possible_one_time - window : possible_one_time + window])
-            if zero_percentage(packets, possible_one_time, threshold_value, ax, before_window, after_window):
+            res, per = zero_percentage(packets, possible_one_time, threshold_value, ax, before_window, after_window)
+            if res:
                 color = "black" if word[i] == 1 else "blue"
                 result.append(1)
+                ones_percentages.append(per)
                 ax.text(
                     possible_one_time,
                     threshold_value + 1,
@@ -208,6 +214,12 @@ def new_correlation_2(packets, times, word, sync_func=None, bit_func=None, sf_kw
         # Print BER
         print(f"BER:\t\t{diff_count / len(word) * 100:.2f}%")
         plt.show()
+
+        ones_percentages = np.array(ones_percentages)
+
+        # Save the percentages to a file
+        np.save("ones_percentages.npy", ones_percentages)
+
         exit()
         return result
 
